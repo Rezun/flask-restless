@@ -355,9 +355,10 @@ class API(APIBase):
             return error_response(404, detail=detail)
         self.session.delete(instance)
         was_deleted = len(self.session.deleted) > 0
-        self.session.commit()
+        self.session.flush()
         for postprocessor in self.postprocessors['DELETE_RESOURCE']:
             postprocessor(was_deleted=was_deleted)
+        self.session.commit()
         if not was_deleted:
             detail = 'There was no instance to delete.'
             return error_response(404, detail=detail)
@@ -384,7 +385,7 @@ class API(APIBase):
         try:
             instance = self.deserialize(data)
             self.session.add(instance)
-            self.session.commit()
+            self.session.flush()
         except ClientGeneratedIDNotAllowed as exception:
             detail = exception.message()
             return error_response(403, cause=exception, detail=detail)
@@ -429,6 +430,7 @@ class API(APIBase):
         status = 201
         for postprocessor in self.postprocessors['POST_RESOURCE']:
             postprocessor(result=result)
+        self.session.commit()
         return result, status, headers
 
     def _update_instance(self, instance, data, resource_id):
@@ -555,7 +557,7 @@ class API(APIBase):
             if data:
                 for field, value in data.items():
                     setattr(instance, field, value)
-            self.session.commit()
+            self.session.flush()
         except self.validation_exceptions as exception:
             return self._handle_validation_exception(exception)
 
@@ -622,4 +624,5 @@ class API(APIBase):
         # Perform any necessary postprocessing.
         for postprocessor in self.postprocessors['PATCH_RESOURCE']:
             postprocessor(result=result)
+        self.session.commit()
         return result, status
