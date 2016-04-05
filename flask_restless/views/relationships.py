@@ -175,10 +175,7 @@ class RelationshipAPI(APIBase):
                     related_value.append(new_value)
                 except self.validation_exceptions as exception:
                     return self._handle_validation_exception(exception)
-        # TODO do we need to commit the session here?
-        #
-        #     self.session.commit()
-        #
+        self.session.commit()
         # Perform any necessary postprocessing.
         for postprocessor in self.postprocessors['POST_RELATIONSHIP']:
             postprocessor()
@@ -300,10 +297,7 @@ class RelationshipAPI(APIBase):
                 setattr(instance, relation_name, replacement)
             except self.validation_exceptions as exception:
                 return self._handle_validation_exception(exception)
-        # TODO do we need to commit the session here?
-        #
-        #     self.session.commit()
-        #
+        self.session.commit()
         # Perform any necessary postprocessing.
         for postprocessor in self.postprocessors['PATCH_RELATIONSHIP']:
             postprocessor()
