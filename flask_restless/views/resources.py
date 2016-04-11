@@ -355,6 +355,8 @@ class API(APIBase):
             return error_response(404, detail=detail)
         self.session.delete(instance)
         was_deleted = len(self.session.deleted) > 0
+        # Flush all changes to database but do not commit the transaction
+        # so that postprocessors have the chance to roll it back
         self.session.flush()
         for postprocessor in self.postprocessors['DELETE_RESOURCE']:
             postprocessor(was_deleted=was_deleted)
@@ -385,6 +387,8 @@ class API(APIBase):
         try:
             instance = self.deserialize(data)
             self.session.add(instance)
+            # Flush all changes to database but do not commit the transaction
+            # so that postprocessors have the chance to roll it back
             self.session.flush()
         except ClientGeneratedIDNotAllowed as exception:
             detail = exception.message()
@@ -557,6 +561,8 @@ class API(APIBase):
             if data:
                 for field, value in data.items():
                     setattr(instance, field, value)
+            # Flush all changes to database but do not commit the transaction
+            # so that postprocessors have the chance to roll it back
             self.session.flush()
         except self.validation_exceptions as exception:
             return self._handle_validation_exception(exception)

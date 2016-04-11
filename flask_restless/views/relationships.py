@@ -175,6 +175,8 @@ class RelationshipAPI(APIBase):
                     related_value.append(new_value)
                 except self.validation_exceptions as exception:
                     return self._handle_validation_exception(exception)
+        # Flush all changes to database but do not commit the transaction
+        # so that postprocessors have the chance to roll it back
         self.session.flush()
         # Perform any necessary postprocessing.
         for postprocessor in self.postprocessors['POST_RELATIONSHIP']:
@@ -298,6 +300,8 @@ class RelationshipAPI(APIBase):
                 setattr(instance, relation_name, replacement)
             except self.validation_exceptions as exception:
                 return self._handle_validation_exception(exception)
+        # Flush all changes to database but do not commit the transaction
+        # so that postprocessors have the chance to roll it back
         self.session.flush()
         # Perform any necessary postprocessing.
         for postprocessor in self.postprocessors['PATCH_RELATIONSHIP']:
@@ -380,6 +384,8 @@ class RelationshipAPI(APIBase):
                 # missing from a to-many relation.
                 pass
         was_deleted = len(self.session.dirty) > 0
+        # Flush all changes to database but do not commit the transaction
+        # so that postprocessors have the chance to roll it back
         self.session.flush()
         for postprocessor in self.postprocessors['DELETE_RELATIONSHIP']:
             postprocessor(was_deleted=was_deleted)
