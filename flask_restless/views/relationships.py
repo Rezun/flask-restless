@@ -331,6 +331,7 @@ class RelationshipAPI(APIBase):
             detail = 'Unable to decode data'
             return error_response(400, cause=exception, detail=detail)
         was_deleted = False
+        #self.manager.preprocessors.delete_relationship.send(self.manager, self.collection_name)
         for preprocessor in self.preprocessors['DELETE_RELATIONSHIP']:
             temp_result = preprocessor(instance_id=resource_id,
                                        relation_name=relation_name)

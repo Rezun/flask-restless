@@ -33,6 +33,8 @@ from .serialization import DefaultDeserializer
 from .views import API
 from .views import FunctionAPI
 from .views import RelationshipAPI
+from .processors import PreProcessors
+from .processors import PostProcessors
 
 #: The names of HTTP methods that allow fetching information.
 READONLY_METHODS = frozenset(('GET', ))
@@ -195,6 +197,9 @@ class APIManager(object):
         self.pre = preprocessors or {}
         self.post = postprocessors or {}
         self.session = session
+
+        self.preprocessors = PreProcessors()
+        self.postprocessors = PostProcessors()
 
         #: The default URL prefix for APIs created by this manager.
         #:
@@ -654,6 +659,7 @@ class APIManager(object):
                                primary_key=primary_key,
                                validation_exceptions=validation_exceptions,
                                allow_to_many_replacement=atmr,
+                               manager=self,
                                # Keyword arguments for API.__init__()
                                page_size=page_size,
                                max_page_size=max_page_size,
@@ -704,6 +710,7 @@ class APIManager(object):
                       primary_key=primary_key,
                       validation_exceptions=validation_exceptions,
                       allow_to_many_replacement=allow_to_many_replacement,
+                      manager=self,
                       # Keyword arguments RelationshipAPI.__init__()
                       allow_delete_from_to_many_relationships=adftmr)
         # When PATCH is allowed, certain non-PATCH requests are allowed

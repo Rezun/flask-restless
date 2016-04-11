@@ -247,6 +247,7 @@ class API(APIBase):
             GET /<collection_name>/<resource_id>
 
         """
+        self.send_signal(self.manager.preprocessors.get_resource, resource_id=resource_id)
         for preprocessor in self.preprocessors['GET_RESOURCE']:
             temp_result = preprocessor(resource_id=resource_id)
             # Let the return value of the preprocessor be the new value of

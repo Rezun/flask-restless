@@ -1114,8 +1114,9 @@ class APIBase(ModelView):
     def __init__(self, session, model, preprocessors=None, postprocessors=None,
                  primary_key=None, serializer=None, deserializer=None,
                  validation_exceptions=None, includes=None, page_size=10,
-                 max_page_size=100, allow_to_many_replacement=False, *args,
-                 **kw):
+                 max_page_size=100, allow_to_many_replacement=False,
+                 manager=None,
+                 *args, **kw):
         super(APIBase, self).__init__(session, model, *args, **kw)
 
         #: The name of the collection specified by the given model class
@@ -1182,6 +1183,9 @@ class APIBase(ModelView):
         #: The mapping from resource type name to requested sparse
         #: fields for resources of that type.
         self.sparse_fields = parse_sparse_fields()
+
+        #: The manager to be able to send processor signals
+        self.manager = manager
 
         # HACK: We would like to use the :attr:`API.decorators` class attribute
         # in order to decorate each view method with a decorator that catches
@@ -1651,8 +1655,7 @@ class APIBase(ModelView):
 
         # This method could have been called on either a request to
         # fetch a collection of resources or a to-many relation.
-        processor_type = \
-            self.collection_processor_type(is_relation=is_relation)
+        processor_type = self.collection_processor_type(is_relation=is_relation)
         processor_type = 'GET_{0}'.format(processor_type)
         for postprocessor in self.postprocessors[processor_type]:
             postprocessor(result=result, filters=filters, sort=sort,
@@ -1695,3 +1698,6 @@ class APIBase(ModelView):
             toinclude = set(toinclude.split(','))
         return set(chain(resources_from_path(instance, path)
                          for path in toinclude))
+
+    def send_signal(self, signal, **parameters):
+        return signal.send(self.manager, name=self.collection_name, **parameters)
