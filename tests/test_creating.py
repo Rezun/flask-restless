@@ -40,9 +40,9 @@ from sqlalchemy.orm import relationship
 from flask.ext.restless import APIManager
 from flask.ext.restless import CONTENT_TYPE
 from flask.ext.restless import DeserializationException
+from flask.ext.restless import ProcessingException
 from flask.ext.restless import SerializationException
 from flask.ext.restless import simple_serialize
-from flask.ext.restless import ProcessingException
 
 from .helpers import BetterJSONEncoder as JSONEncoder
 from .helpers import check_sole_error

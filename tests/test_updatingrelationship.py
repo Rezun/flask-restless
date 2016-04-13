@@ -24,6 +24,7 @@ from sqlalchemy.orm import backref
 from sqlalchemy.orm import relationship
 
 from flask.ext.restless import ProcessingException
+
 from .helpers import check_sole_error
 from .helpers import dumps
 from .helpers import ManagerTestBase
