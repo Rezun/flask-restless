@@ -1020,10 +1020,9 @@ class TestProcessors(ManagerTestBase):
         response = self.app.patch('/api/person/1', data=dumps(data))
 
         assert response.status_code == 500
-        current_person = self.session.query(self.Person).filter(self.Person.id == 1).first()
-        assert current_person.name == u'bar'
+        assert person.name == u'bar'
         self.session.rollback()
-        assert current_person.name == u'foo'
+        assert person.name == u'foo'
 
 
 class TestAssociationProxy(ManagerTestBase):

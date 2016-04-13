@@ -283,11 +283,11 @@ class TestProcessors(ManagerTestBase):
         response = self.app.delete('/api/person/1')
 
         assert response.status_code == 500
-        person_count = self.session.query(self.Person).count()
-        assert person_count == 0
+        people = self.session.query(self.Person).all()
+        assert people == []
         self.session.rollback()
-        person_count = self.session.query(self.Person).count()
-        assert person_count == 1
+        people = self.session.query(self.Person).all()
+        assert people == [person]
 
 
 class TestFlaskSQLAlchemy(FlaskSQLAlchemyTestBase):
