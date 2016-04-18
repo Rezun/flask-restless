@@ -508,6 +508,19 @@ class PrimaryKeyFinder(KnowsAPIManagers, Singleton):
         return primary_key
 
 
+class PreprocessorOverrider:
+    """Provides options to override the behavior of an operation in the preprocessor"""
+
+    def __init__(self):
+        self.override_default_behavior = False
+        self.response = None
+        self.status_code = 200
+        self.headers = {}
+
+    def get_internal_response(self):
+        return self.response, self.status_code, self.headers
+
+
 #: Returns the URL for the specified model, similar to :func:`flask.url_for`.
 #:
 #: `model` is a SQLAlchemy model class. This should be a model on which
