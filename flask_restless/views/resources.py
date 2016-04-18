@@ -26,6 +26,7 @@ from ..helpers import get_related_model
 from ..helpers import has_field
 from ..helpers import is_like_list
 from ..helpers import primary_key_value
+from ..helpers import PreprocessorOverrider
 from ..helpers import strings_to_datetimes
 from ..serialization import DeserializationException
 from ..serialization import SerializationException
@@ -130,10 +131,12 @@ class API(APIBase):
             GET /<collection_name>/<resource_id>/<relation_name>/<related_resource_id>
 
         """
+        overrider = PreprocessorOverrider()
         for preprocessor in self.preprocessors['GET_RELATED_RESOURCE']:
             temp_result = preprocessor(resource_id=resource_id,
                                        relation_name=relation_name,
-                                       related_resource_id=related_resource_id)
+                                       related_resource_id=related_resource_id,
+                                       overrider=overrider)
             # Let the return value of the preprocessor be the new value of
             # instid, thereby allowing the preprocessor to effectively specify
             # which instance of the model to process on.
@@ -150,6 +153,8 @@ class API(APIBase):
                             temp_result
                 else:
                     resource_id = temp_result
+        if overrider.override_default_behavior:
+            return overrider.get_internal_response()
         # Get the resource with the specified ID.
         primary_resource = get_by(self.session, self.model, resource_id,
                                   self.primary_key)
@@ -216,11 +221,13 @@ class API(APIBase):
             detail = 'Invalid format for filter[single] query parameter'
             return error_response(400, cause=exception, detail=detail)
 
+        overrider = PreprocessorOverrider()
         for preprocessor in self.preprocessors['GET_RELATION']:
             temp_result = preprocessor(resource_id=resource_id,
                                        relation_name=relation_name,
                                        filters=filters, sort=sort,
-                                       group_by=group_by, single=single)
+                                       group_by=group_by, single=single,
+                                       overrider=overrider)
             # Let the return value of the preprocessor be the new value of
             # instid, thereby allowing the preprocessor to effectively specify
             # which instance of the model to process on.
@@ -233,6 +240,8 @@ class API(APIBase):
                     resource_id, relation_name = temp_result
                 else:
                     resource_id = temp_result
+        if overrider.override_default_behavior:
+            return overrider.get_internal_response()
 
         # Get the resource with the specified ID.
         primary_resource = get_by(self.session, self.model, resource_id,
@@ -273,8 +282,9 @@ class API(APIBase):
             GET /<collection_name>/<resource_id>
 
         """
+        overrider = PreprocessorOverrider()
         for preprocessor in self.preprocessors['GET_RESOURCE']:
-            temp_result = preprocessor(resource_id=resource_id)
+            temp_result = preprocessor(resource_id=resource_id, overrider=overrider)
             # Let the return value of the preprocessor be the new value of
             # instid, thereby allowing the preprocessor to effectively specify
             # which instance of the model to process on.
@@ -284,6 +294,8 @@ class API(APIBase):
             # instid.
             if temp_result is not None:
                 resource_id = temp_result
+        if overrider.override_default_behavior:
+            return overrider.get_internal_response()
         # Get the resource with the specified ID.
         resource = get_by(self.session, self.model, resource_id,
                           self.primary_key)
@@ -319,9 +331,12 @@ class API(APIBase):
             detail = 'Invalid format for filter[single] query parameter'
             return error_response(400, cause=exception, detail=detail)
 
+        overrider = PreprocessorOverrider()
         for preprocessor in self.preprocessors['GET_COLLECTION']:
             preprocessor(filters=filters, sort=sort, group_by=group_by,
-                         single=single)
+                         single=single, overrider=overrider)
+        if overrider.override_default_behavior:
+            return overrider.get_internal_response()
 
         return self._get_collection_helper(filters=filters, sort=sort,
                                            group_by=group_by, single=single)
@@ -368,11 +383,14 @@ class API(APIBase):
         format specified by the JSON API specification.
 
         """
+        overrider = PreprocessorOverrider()
         for preprocessor in self.preprocessors['DELETE_RESOURCE']:
-            temp_result = preprocessor(resource_id=resource_id)
+            temp_result = preprocessor(resource_id=resource_id, overrider=overrider)
             # See the note under the preprocessor in the get() method.
             if temp_result is not None:
                 resource_id = temp_result
+        if overrider.override_default_behavior:
+            return overrider.get_internal_response()
         was_deleted = False
         instance = get_by(self.session, self.model, resource_id,
                           self.primary_key)
@@ -402,9 +420,12 @@ class API(APIBase):
         except (BadRequest, TypeError, ValueError, OverflowError) as exception:
             detail = 'Unable to decode data'
             return error_response(400, cause=exception, detail=detail)
+        overrider = PreprocessorOverrider()
         # apply any preprocessors to the POST arguments
         for preprocessor in self.preprocessors['POST_RESOURCE']:
-            preprocessor(data=document)
+            preprocessor(data=document, overrider=overrider)
+        if overrider.override_default_behavior:
+            return overrider.get_internal_response()
         # Convert the dictionary representation into an instance of the
         # model.
         try:
@@ -594,11 +615,14 @@ class API(APIBase):
             # this also happens when request.data is empty
             detail = 'Unable to decode data'
             return error_response(400, cause=exception, detail=detail)
+        overrider = PreprocessorOverrider()
         for preprocessor in self.preprocessors['PATCH_RESOURCE']:
-            temp_result = preprocessor(resource_id=resource_id, data=data)
+            temp_result = preprocessor(resource_id=resource_id, data=data, overrider=overrider)
             # See the note under the preprocessor in the get() method.
             if temp_result is not None:
                 resource_id = temp_result
+        if overrider.override_default_behavior:
+            return overrider.get_internal_response()
         # Get the instance on which to set the new attributes.
         instance = get_by(self.session, self.model, resource_id,
                           self.primary_key)

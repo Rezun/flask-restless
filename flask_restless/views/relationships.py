@@ -24,6 +24,7 @@ from ..helpers import collection_name
 from ..helpers import get_by
 from ..helpers import get_related_model
 from ..helpers import is_like_list
+from ..helpers import PreprocessorOverrider
 from .base import APIBase
 from .base import error
 from .base import error_response
@@ -74,9 +75,11 @@ class RelationshipAPI(APIBase):
         format specified by the JSON API specification.
 
         """
+        overrider = PreprocessorOverrider()
         for preprocessor in self.preprocessors['GET_RELATIONSHIP']:
             temp_result = preprocessor(resource_id=resource_id,
-                                       relation_name=relation_name)
+                                       relation_name=relation_name,
+                                       overrider=overrider)
             # Let the return value of the preprocessor be the new value of
             # instid, thereby allowing the preprocessor to effectively specify
             # which instance of the model to process on.
@@ -86,6 +89,8 @@ class RelationshipAPI(APIBase):
             # instid.
             if temp_result is not None:
                 resource_id = temp_result
+        if overrider.override_default_behavior:
+            return overrider.get_internal_response()
         # get the instance of the "main" model whose ID is `resource_id`
         primary_resource = get_by(self.session, self.model, resource_id,
                                   self.primary_key)
@@ -127,12 +132,16 @@ class RelationshipAPI(APIBase):
             # this also happens when request.data is empty
             detail = 'Unable to decode data'
             return error_response(400, cause=exception, detail=detail)
+        overrider = PreprocessorOverrider()
         for preprocessor in self.preprocessors['POST_RELATIONSHIP']:
             temp_result = preprocessor(resource_id=resource_id,
-                                       relation_name=relation_name, data=data)
+                                       relation_name=relation_name, data=data,
+                                       overrider=overrider)
             # See the note under the preprocessor in the get() method.
             if temp_result is not None:
                 resource_id, relation_name = temp_result
+        if overrider.override_default_behavior:
+            return overrider.get_internal_response()
         instance = get_by(self.session, self.model, resource_id,
                           self.primary_key)
         # If no instance of the model exists with the specified instance ID,
@@ -205,12 +214,16 @@ class RelationshipAPI(APIBase):
             # this also happens when request.data is empty
             detail = 'Unable to decode data'
             return error_response(400, cause=exception, detail=detail)
+        overrider = PreprocessorOverrider()
         for preprocessor in self.preprocessors['PATCH_RELATIONSHIP']:
             temp_result = preprocessor(instance_id=resource_id,
-                                       relation_name=relation_name, data=data)
+                                       relation_name=relation_name, data=data,
+                                       overrider=overrider)
             # See the note under the preprocessor in the get() method.
             if temp_result is not None:
                 resource_id, relation_name = temp_result
+        if overrider.override_default_behavior:
+            return overrider.get_internal_response()
         instance = get_by(self.session, self.model, resource_id,
                           self.primary_key)
         # If no instance of the model exists with the specified instance ID,
@@ -333,12 +346,16 @@ class RelationshipAPI(APIBase):
             detail = 'Unable to decode data'
             return error_response(400, cause=exception, detail=detail)
         was_deleted = False
+        overrider = PreprocessorOverrider()
         for preprocessor in self.preprocessors['DELETE_RELATIONSHIP']:
             temp_result = preprocessor(instance_id=resource_id,
-                                       relation_name=relation_name)
+                                       relation_name=relation_name,
+                                       overrider=overrider)
             # See the note under the preprocessor in the get() method.
             if temp_result is not None:
                 resource_id = temp_result
+        if overrider.override_default_behavior:
+            return overrider.get_internal_response()
         instance = get_by(self.session, self.model, resource_id,
                           self.primary_key)
         # If no such relation exists, return an error to the client.
