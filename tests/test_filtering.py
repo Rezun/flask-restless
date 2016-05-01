@@ -36,10 +36,10 @@ from sqlalchemy.orm import backref
 from sqlalchemy.orm import relationship
 from testing.postgresql import PostgresqlFactory as PGFactory
 
-from .helpers import check_sole_error
-from .helpers import dumps
-from .helpers import loads
-from .helpers import ManagerTestBase
+from tests.helpers import check_sole_error
+from tests.helpers import dumps
+from tests.helpers import loads
+from tests.helpers import ManagerTestBase
 
 
 #: The PostgreSQL class used to create a temporary database for testing.
@@ -698,6 +698,32 @@ class TestFiltering(SearchTestBase):
         articles = document['data']
         assert ['3', '4'] == sorted(article['id'] for article in articles)
 
+    def test_json_api_syntax(self):
+        person1 = self.Person(name=u'Jesus', )
+        person2 = self.Person(name=u'Mary')
+        person3 = self.Person(name=u'Joseph')
+        self.session.add_all([person1, person2, person3])
+        self.session.commit()
+        query_string = {u'filter[name]': 'Mary'}
+        response = self.app.get('/api/person', query_string=query_string)
+        document = loads(response.data)
+        people = document['data']
+        assert len(people) == 1
+        assert person2.name == people[0]['attributes']['name']
+
+    def test_json_api_multiple_syntax(self):
+        person1 = self.Person(name=u'Jesus', )
+        person2 = self.Person(name=u'Mary')
+        person3 = self.Person(name=u'Joseph')
+        self.session.add_all([person1, person2, person3])
+        self.session.commit()
+        query_string = {u'filter[name]': '[Mary,Jesus]'}
+        response = self.app.get('/api/person', query_string=query_string)
+        document = loads(response.data)
+        people = document['data']
+        assert len(people) == 2
+        assert ['Jesus', 'Mary'] == sorted(person['attributes']['name']
+                                           for person in people)
 
 class TestOperators(SearchTestBase):
 

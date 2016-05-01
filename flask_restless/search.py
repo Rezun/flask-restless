@@ -18,7 +18,9 @@ relationship on a particular instance of a SQLAlchemy model.
 
 """
 import inspect
+import re
 
+from flask import json
 from sqlalchemy import and_
 from sqlalchemy import or_
 from sqlalchemy.ext.associationproxy import AssociationProxy
@@ -33,6 +35,21 @@ from .helpers import primary_key_names
 from .helpers import primary_key_value
 from .helpers import session_query
 from .helpers import string_to_datetime
+
+
+#: The query parameter key that identifies filter objects in a
+#: :http:method:`get` request.
+FILTER_PARAM = 'filter[objects]'
+FILTER_SINGLE_PARAM = 'filter[single]'
+FILTER_REGEX = 'filter\[(?P<attribute>.+?)\]'
+
+
+class SingleKeyError(KeyError):
+    """Raised when attempting to parse the "single" query parameter reveals
+    that the client did not correctly provide a Boolean value.
+
+    """
+    pass
 
 
 class ComparisonToNull(Exception):
@@ -255,6 +272,69 @@ class Filter(object):
                                        for filter_ in subfilters])
 
 
+class FilterCollection(object):
+    def __init__(self, request):
+        self.restless_filters = json.loads(request.args.get(FILTER_PARAM, '[]'))
+        self.json_api_filters = {}
+
+        try:
+            has_single_parameter = request.args.get(FILTER_SINGLE_PARAM, None) is not None
+            self.single = bool(int(request.args.get('filter[single]', 0)))
+        except ValueError:
+            raise SingleKeyError('failed to extract Boolean from parameter')
+
+        if len(self.restless_filters) == 0 and not has_single_parameter:
+            for key, value in request.args.items():
+                match = re.match(FILTER_REGEX, key)
+                if match:
+                    self.json_api_filters[match.group(u'attribute')] = value
+
+    def _has_json_api_filters(self):
+        return len(self.json_api_filters) > 0
+
+    def _has_restless_filters(self):
+        return len(self.restless_filters) > 0
+
+    @staticmethod
+    def _convert_to_restless_filter_expression(attribute_name, filter_value):
+        result = {u'name': attribute_name, u'val': filter_value}
+        if ',' in filter_value:
+            result[u'op'] = 'in'
+        else:
+            result[u'op'] = 'equals'
+        return result
+
+    @staticmethod
+    def _append_to_filter(filter_collection, filter_to_append):
+        if len(filter_collection) == 0:
+            filter_collection.append(filter_to_append)
+        elif len(filter_collection) == 1:
+            tmp = filter_collection[0]
+            filter_collection[0] = {'and': [tmp, filter_to_append]}
+        elif len(filter_collection) > 1:
+            filter_collection[0]['and'].append(filter_to_append)
+
+    def get_all_filters(self):
+        if self._has_json_api_filters():
+            result = []
+            for key, value in self.json_api_filters.items():
+                converted_filter = self._convert_to_restless_filter_expression(key, value)
+                self._append_to_filter(result, converted_filter)
+            return result
+        elif self._has_restless_filters():
+            return self.restless_filters
+        else:
+            return []
+
+    def get_as_query_parameters(self):
+        if self._has_json_api_filters():
+            return {u'filter[' + key + u']': value for key, value in self.json_api_filters.items()}
+        elif self._has_restless_filters():
+            return {FILTER_PARAM: json.dumps(self.restless_filters)}
+        else:
+            return None
+
+
 class JunctionFilter(Filter):
     """A conjunction or disjunction of other filters.
 
@@ -399,7 +479,7 @@ def create_filters(model, filters):
     # of a filter object into an intermediate representation, an
     # instance of :class:`.Filter` that facilitates the construction of
     # the actual SQLAlchemy code in `create_filter` below.
-    filters = (Filter.from_dictionary(model, f) for f in filters)
+    filters = (Filter.from_dictionary(model, f) for f in filters.get_all_filters())
     # Each of these function calls may raise a FilterCreationError.
     #
     # TODO In Python 3.3+, this should be `yield from ...`.

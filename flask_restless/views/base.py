@@ -57,8 +57,10 @@ from ..helpers import primary_key_value
 from ..helpers import serializer_for
 from ..helpers import url_for
 from ..search import ComparisonToNull
+from ..search import FilterCollection
 from ..search import search
 from ..search import search_relationship
+from ..search import SingleKeyError
 from ..search import UnknownField
 from ..serialization import DeserializationException
 from ..serialization import JsonApiDocument
@@ -150,14 +152,6 @@ chain = chain.from_iterable
 
 # Register the JSON API content type so that mimerender knows to look for it.
 register_mime('jsonapi', (CONTENT_TYPE, ))
-
-
-class SingleKeyError(KeyError):
-    """Raised when attempting to parse the "single" query parameter reveals
-    that the client did not correctly provide a Boolean value.
-
-    """
-    pass
 
 
 class PaginationError(Exception):
@@ -805,7 +799,7 @@ def collection_parameters():
 
     """
     # Determine filtering options.
-    filters = json.loads(request.args.get(FILTER_PARAM, '[]'))
+    filters = FilterCollection(request)
     # # TODO fix this using the below
     # filters = [strings_to_dates(self.model, f) for f in filters]
 
@@ -848,13 +842,9 @@ def collection_parameters():
     else:
         group_by = []
 
-    # Determine whether the client expects a single resource response.
-    try:
-        single = bool(int(request.args.get('filter[single]', 0)))
-    except ValueError:
-        raise SingleKeyError('failed to extract Boolean from parameter')
 
-    return filters, sort, group_by, single
+
+    return filters, sort, group_by, filters.single
 
 
 #: Creates the mimerender object necessary for decorating responses with a
@@ -1095,8 +1085,8 @@ class Paginated(object):
         # to pagination links, so we collect those query parameters
         # here, if they exist.
         query_params = {}
-        if filters:
-            query_params[FILTER_PARAM] = Paginated._filters_to_string(filters)
+        # if filters:
+        #     query_params[FILTER_PARAM] = Paginated._filters_to_string(filters)
         if sort:
             query_params[SORT_PARAM] = Paginated._sort_to_string(sort)
         if group_by:
