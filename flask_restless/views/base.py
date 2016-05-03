@@ -1030,20 +1030,9 @@ class Paginated(object):
         if page_size == 0:
             return
         # Create the pagination link URLs.
-        #
-        # Need to account for filters, sort, and group_by, in addition
-        # to pagination links, so we collect those query parameters
-        # here, if they exist.
-        query_params = {}
-        if filters:
-            query_params[FILTER_PARAM] = Paginated._filters_to_string(filters)
-        if sort:
-            query_params[SORT_PARAM] = Paginated._sort_to_string(sort)
-        if group_by:
-            query_params[GROUP_PARAM] = Paginated._group_to_string(group_by)
         # The page size is independent of the link type (first, last,
         # next, or prev).
-        query_params[PAGE_SIZE_PARAM] = str(page_size)
+        query_params = {PAGE_SIZE_PARAM: str(page_size)}
         # Maintain a list of URLs that should appear in a Link
         # header. If a link does not exist (for example, if there is no
         # previous page), then that link URL will not appear in this
