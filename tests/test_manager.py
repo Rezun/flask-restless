@@ -20,13 +20,13 @@ from sqlalchemy import Unicode
 from sqlalchemy.orm import backref
 from sqlalchemy.orm import relationship
 
-from flask.ext.restless import APIManager
-from flask.ext.restless import collection_name
-from flask.ext.restless import DefaultSerializer
-from flask.ext.restless import IllegalArgumentError
-from flask.ext.restless import model_for
-from flask.ext.restless import serializer_for
-from flask.ext.restless import url_for
+from flask_restless import APIManager
+from flask_restless import collection_name
+from flask_restless import DefaultSerializer
+from flask_restless import IllegalArgumentError
+from flask_restless import model_for
+from flask_restless import serializer_for
+from flask_restless import url_for
 
 from .helpers import FlaskSQLAlchemyTestBase
 from .helpers import force_content_type_jsonapi
@@ -36,8 +36,8 @@ from .helpers import SQLAlchemyTestBase
 
 
 class TestLocalAPIManager(SQLAlchemyTestBase):
-    """Provides tests for :class:`flask.ext.restless.APIManager` when the tests
-    require that the instance of :class:`flask.ext.restless.APIManager` has not
+    """Provides tests for :class:`flask_restless.APIManager` when the tests
+    require that the instance of :class:`flask_restless.APIManager` has not
     yet been instantiated.
 
     """
@@ -292,22 +292,8 @@ class TestAPIManager(ManagerTestBase):
         self.Tag = Tag
         self.Base.metadata.create_all()
 
-    # HACK If we don't include this, there seems to be an issue with the
-    # globally known APIManager objects not being cleared after every test.
-    def tearDown(self):
-        """Clear the :class:`flask.ext.restless.APIManager` objects known by
-        the global functions :data:`model_for`, :data:`url_for`, and
-        :data:`collection_name`.
-
-        """
-        super(TestAPIManager, self).tearDown()
-        model_for.created_managers.clear()
-        url_for.created_managers.clear()
-        collection_name.created_managers.clear()
-        serializer_for.created_managers.clear()
-
     def test_url_for(self):
-        """Tests the global :func:`flask.ext.restless.url_for` function."""
+        """Tests the global :func:`flask_restless.url_for` function."""
         self.manager.create_api(self.Person, collection_name='people')
         self.manager.create_api(self.Article, collection_name='articles')
         with self.flaskapp.test_request_context():
@@ -349,7 +335,7 @@ class TestAPIManager(ManagerTestBase):
             url_for(self.Person)
 
     def test_collection_name(self):
-        """Tests the global :func:`flask.ext.restless.collection_name`
+        """Tests the global :func:`flask_restless.collection_name`
         function.
 
         """
@@ -365,7 +351,7 @@ class TestAPIManager(ManagerTestBase):
             collection_name(self.Person)
 
     def test_serializer_for(self):
-        """Tests the global :func:`flask.ext.restless.serializer_for`
+        """Tests the global :func:`flask_restless.serializer_for`
         function.
 
         """
@@ -385,7 +371,7 @@ class TestAPIManager(ManagerTestBase):
             serializer_for(self.Person)
 
     def test_model_for(self):
-        """Tests the global :func:`flask.ext.restless.model_for` function."""
+        """Tests the global :func:`flask_restless.model_for` function."""
         self.manager.create_api(self.Person, collection_name='people')
         assert model_for('people') is self.Person
 
@@ -398,8 +384,8 @@ class TestAPIManager(ManagerTestBase):
             model_for('people')
 
     def test_model_for_collection_name(self):
-        """Tests that :func:`flask.ext.restless.model_for` is the inverse of
-        :func:`flask.ext.restless.collection_name`.
+        """Tests that :func:`flask_restless.model_for` is the inverse of
+        :func:`flask_restless.collection_name`.
 
         """
         self.manager.create_api(self.Person, collection_name='people')
@@ -506,7 +492,7 @@ class TestFSA(FlaskSQLAlchemyTestBase):
 
     def test_create_api_before_db_create_all(self):
         """Tests that we can create APIs before
-        :meth:`flask.ext.sqlalchemy.SQLAlchemy.create_all` is called.
+        :meth:`flask_sqlalchemy.SQLAlchemy.create_all` is called.
 
         """
         manager = APIManager(self.flaskapp, flask_sqlalchemy_db=self.db)

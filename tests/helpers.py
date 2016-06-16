@@ -25,8 +25,8 @@ import uuid
 from flask import Flask
 from flask import json
 try:
-    from flask.ext import sqlalchemy as flask_sqlalchemy
-    from flask.ext.sqlalchemy import SQLAlchemy
+    import flask_sqlalchemy
+    from flask_sqlalchemy import SQLAlchemy
 except ImportError:
     has_flask_sqlalchemy = False
 else:
@@ -41,12 +41,17 @@ from sqlalchemy.orm.session import Session as SessionBase
 from sqlalchemy.types import CHAR
 from sqlalchemy.types import TypeDecorator
 
-from flask.ext.restless import APIManager
-from flask.ext.restless import CONTENT_TYPE
-from flask.ext.restless import DefaultSerializer
-from flask.ext.restless import DefaultDeserializer
-from flask.ext.restless import DeserializationException
-from flask.ext.restless import SerializationException
+from flask_restless import APIManager
+from flask_restless import collection_name
+from flask_restless import CONTENT_TYPE
+from flask_restless import DefaultSerializer
+from flask_restless import DefaultDeserializer
+from flask_restless import DeserializationException
+from flask_restless import model_for
+from flask_restless import primary_key_for
+from flask_restless import SerializationException
+from flask_restless import serializer_for
+from flask_restless import url_for
 
 dumps = json.dumps
 loads = json.loads
@@ -66,6 +71,10 @@ IS_PYTHON2 = (sys.version_info[0] == 2)
 
 #: Tuple of objects representing types.
 CLASS_TYPES = (types.TypeType, types.ClassType) if IS_PYTHON2 else (type, )
+
+#: Global helper functions used by Flask-Restless
+GLOBAL_FUNCS = [model_for, url_for, collection_name, serializer_for,
+                primary_key_for]
 
 
 class raise_s_exception(DefaultSerializer):
@@ -244,10 +253,10 @@ class GUID(TypeDecorator):
         return uuid.UUID(value)
 
 
-# In versions of Flask before 1.0, datetime and time objects are not
+# In versions of Flask before 0.11, datetime and time objects are not
 # serializable by default so we need to create a custom JSON encoder class.
 #
-# TODO When Flask 1.0 is required, remove this.
+# TODO When Flask 0.11 is required, remove this.
 class BetterJSONEncoder(JSONEncoder):
     """Extends the default JSON encoder to serialize objects from the
     :mod:`datetime` module.
@@ -376,24 +385,36 @@ class SQLAlchemyTestBase(FlaskTestBase, DatabaseMixin):
 
 class ManagerTestBase(SQLAlchemyTestBase):
     """Base class for tests that use a SQLAlchemy database and an
-    :class:`~flask.ext.restless.APIManager`.
+    :class:`~flask_restless.APIManager`.
 
     Nearly all test classes should subclass this class. Since we strive
     to make Flask-Restless compliant with plain old SQLAlchemy first,
     the default database abstraction layer used by tests in this class
     will be SQLAlchemy. Test classes requiring Flask-SQLAlchemy must
-    instantiate their own :class:`~flask.ext.restless.APIManager`.
+    instantiate their own :class:`~flask_restless.APIManager`.
 
-    The :class:`~flask.ext.restless.APIManager` instance for use in
+    The :class:`~flask_restless.APIManager` instance for use in
     tests is accessible at ``self.manager``.
 
     """
 
     def setUp(self):
         """Initializes an instance of
-        :class:`~flask.ext.restless.APIManager` with a SQLAlchemy
+        :class:`~flask_restless.APIManager` with a SQLAlchemy
         session.
 
         """
         super(ManagerTestBase, self).setUp()
         self.manager = APIManager(self.flaskapp, session=self.session)
+
+    # HACK If we don't include this, there seems to be an issue with the
+    # globally known APIManager objects not being cleared after every test.
+    def tearDown(self):
+        """Clear the :class:`~flask_restless.APIManager` objects
+        known by the global helper functions :data:`model_for`,
+        :data:`url_for`, etc.
+
+        """
+        super(ManagerTestBase, self).tearDown()
+        for func in GLOBAL_FUNCS:
+            func.created_managers.clear()
